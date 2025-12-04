@@ -1,69 +1,95 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Şanslı Masa TV</title>
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/stompjs"></script>
+    <title>Şanslı Masa</title>
 
     <style>
         body {
-            background:black;
-            color:white;
-            font-family:Arial;
-            text-align:center;
-            margin-top:120px;
+            background: #000;
+            color: #fff;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            margin-top: 100px;
         }
+
+        h1 {
+            font-size: 70px;
+        }
+
+        #timer {
+            font-size: 90px;
+            margin-top: 20px;
+            margin-bottom: 40px;
+        }
+
         #winner {
-            font-size:150px;
-            display:none;
-        }
-        #counter {
-            font-size:120px;
+            font-size: 100px;
+            color: yellow;
+            margin-top: 50px;
         }
     </style>
-</head>
 
+    <script src="/js/stomp.umd.min.js"></script>
+    <script src="/js/sockjs.min.js"></script>
+</head>
 <body>
-<h1>ŞANSLI MASA</h1>
-<div id="counter"></div>
-<div id="winner"></div>
+
+<h1>VERSION TEST 999</h1>
+<div id="timer">00:00</div>
+<div id="winner">Bekleniyor...</div>
 
 <script>
-    // Sayaç: Her saat başına kaç saniye kaldığını hesaplar
-    function updateCounter() {
+
+    // --------------------------------------
+    // TIMER
+    // --------------------------------------
+    function updateTimer() {
         const now = new Date();
         const nextHour = new Date();
-        nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+
+        nextHour.setHours(now.getHours() + 1);
+        nextHour.setMinutes(0);
+        nextHour.setSeconds(0);
+
         const diff = nextHour - now;
+        const seconds = Math.floor(diff / 1000) % 60;
+        const minutes = Math.floor(diff / (1000 * 60)) % 60;
 
-        const minutes = Math.floor(diff / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
-
-        document.getElementById("counter").textContent =
-            minutes + " dakika " + seconds + " saniye";
-
-        setTimeout(updateCounter, 1000);
+        document.getElementById("timer").innerText =
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    updateCounter();
+    setInterval(updateTimer, 1000);
+    updateTimer();
 
-    // WebSocket Bağlantısı
-    const socket = new SockJS('/ws');
-    const client = Stomp.over(socket);
 
-    client.connect({}, () => {
-        client.subscribe('/topic/winner', msg => {
-            const number = msg.body;
-            document.getElementById("winner").textContent =
-                "Kazanan Masa: " + number;
-            document.getElementById("winner").style.display = "block";
+    // --------------------------------------
+    // WEBSOCKET - STOMP
+    // --------------------------------------
+    console.log("StompJs kontrol:", typeof StompJs);
 
-            setTimeout(() => {
-                document.getElementById("winner").style.display = "none";
-            }, 20000);
-        });
+    var socket = new SockJS('/ws');
+
+    // ❗❗ ÖNEMLİ: const DEĞİL var KULLANIYORUZ!
+    var stompClient = new StompJs.Client({
+        webSocketFactory: () => socket,
+        reconnectDelay: 3000
     });
+
+    stompClient.onConnect = () => {
+        console.log("WS CONNECTED!");
+
+        stompClient.subscribe('/topic/winner', msg => {
+            console.log("TV Winner Mesajını Aldı:", msg.body);
+            document.getElementById("winner").innerText =
+                "Masa " + msg.body;
+        });
+    };
+
+    stompClient.activate();
+
 </script>
+
 </body>
 </html>

@@ -8,11 +8,11 @@ public class TvController {
 
     @GetMapping("/tv")
     public String tv() {
-        return "tv.html";
+        return "redirect:/tv.html";
     }
 
     @GetMapping("/admin-panel")
     public String admin() {
-        return "admin.html";
+        return "redirect:/admin.html";
     }
 }
