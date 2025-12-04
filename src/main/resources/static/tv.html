@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Şanslı Masa TV</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs"></script>
+
+    <style>
+        body {
+            background:black;
+            color:white;
+            font-family:Arial;
+            text-align:center;
+            margin-top:120px;
+        }
+        #winner {
+            font-size:150px;
+            display:none;
+        }
+        #counter {
+            font-size:120px;
+        }
+    </style>
+</head>
+
+<body>
+<h1>ŞANSLI MASA</h1>
+<div id="counter"></div>
+<div id="winner"></div>
+
+<script>
+    // Sayaç: Her saat başına kaç saniye kaldığını hesaplar
+    function updateCounter() {
+        const now = new Date();
+        const nextHour = new Date();
+        nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+        const diff = nextHour - now;
+
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+
+        document.getElementById("counter").textContent =
+            minutes + " dakika " + seconds + " saniye";
+
+        setTimeout(updateCounter, 1000);
+    }
+
+    updateCounter();
+
+    // WebSocket Bağlantısı
+    const socket = new SockJS('/ws');
+    const client = Stomp.over(socket);
+
+    client.connect({}, () => {
+        client.subscribe('/topic/winner', msg => {
+            const number = msg.body;
+            document.getElementById("winner").textContent =
+                "Kazanan Masa: " + number;
+            document.getElementById("winner").style.display = "block";
+
+            setTimeout(() => {
+                document.getElementById("winner").style.display = "none";
+            }, 20000);
+        });
+    });
+</script>
+</body>
+</html>

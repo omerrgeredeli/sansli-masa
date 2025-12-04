@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+</head>
+
+<body>
+<h1>Admin Panel</h1>
+
+<h2>Masa Ekle</h2>
+<input id="num" placeholder="Masa numarası">
+<button onclick="addTable()">Ekle</button>
+
+<h2>Masalar</h2>
+<div id="list"></div>
+
+<script>
+    function load() {
+        fetch("/admin/tables")
+            .then(r => r.json())
+            .then(data => {
+                let html = "";
+                data.forEach(t => {
+                    html += `<div>
+                        Masa ${t.number} — ${t.active ? "Aktif" : "Pasif"}
+                        <button onclick="setStatus(${t.number}, true)">Aktif</button>
+                        <button onclick="setStatus(${t.number}, false)">Pasif</button>
+                    </div>`;
+                });
+                document.getElementById("list").innerHTML = html;
+            });
+    }
+
+    function addTable() {
+        fetch("/admin/tables", {
+            method: "POST",
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+                number: parseInt(document.getElementById("num").value),
+                active: true
+            })
+        }).then(load);
+    }
+
+    function setStatus(num, active) {
+        fetch(`/admin/tables/${num}?active=${active}`, {
+            method: "PUT"
+        }).then(load);
+    }
+
+    load();
+</script>
+
+</body>
+</html>
