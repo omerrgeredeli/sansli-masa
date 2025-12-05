@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Kayıt</title>
+    <style>
+        body {
+            background: #111;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .box {
+            width: 350px;
+            background: #222;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px #000;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 5px;
+            border: none;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background: #0077ff;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #0060d0;
+        }
+        a {
+            color: #88f;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="box">
+    <h2>Admin Kayıt</h2>
+
+    <form method="post" action="/signup">
+        <input name="username" placeholder="Kullanıcı adı" required>
+        <input name="password" type="password" placeholder="Şifre" required>
+
+        <button type="submit">Hesap Oluştur</button>
+    </form>
+
+    <a href="/login">Giriş Ekranına Dön</a>
+</div>
+</body>
+</html>

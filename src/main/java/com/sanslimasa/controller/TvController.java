@@ -1,36 +1,27 @@
 package com.sanslimasa.controller;
 
 import com.sanslimasa.service.LotteryService;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
-@Controller
+@RestController
+@RequiredArgsConstructor
 public class TvController {
 
     private final LotteryService lotteryService;
 
-    public TvController(LotteryService lotteryService) {
-        this.lotteryService = lotteryService;
-    }
-
-    @GetMapping("/tv")
-    public String tv() {
-        return "redirect:/tv.html";
-    }
-
-    @GetMapping("/admin-panel")
-    public String admin() {
-        return "redirect:/admin.html";
-    }
-
-    /**
-     * TV ekranının yüklenirken son çekiliş sonucunu alması için REST API.
-     * @return En son kazanan masa numarası (Yoksa '0' veya 'null' olabilir).
-     */
     @GetMapping("/api/last-winner")
-    @ResponseBody
-    public Integer getLastWinner() {
+    public int getLastWinner() {
         return lotteryService.getLastWinnerNumber();
+    }
+
+    @PostMapping("/test/spin")
+    public void testSpin() {
+        lotteryService.broadcastSpinStart();
+    }
+
+    @PostMapping("/test/winner")
+    public void testWinner(@RequestParam int table) {
+        lotteryService.runLottery(); // random çalışacak ama dilersen direkt gönderirim
     }
 }

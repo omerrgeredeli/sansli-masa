@@ -1,34 +1,74 @@
 package com.sanslimasa.controller;
 
-import com.sanslimasa.model.Table;
+import com.sanslimasa.model.Admin;
+import com.sanslimasa.model.TableEntity;
+import com.sanslimasa.service.AdminService;
 import com.sanslimasa.service.TableService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
-@RestController
+@Controller
+@RequiredArgsConstructor
 @RequestMapping("/admin")
-@CrossOrigin
 public class AdminController {
 
+    private final AdminService adminService;
     private final TableService tableService;
 
-    public AdminController(TableService tableService) {
-        this.tableService = tableService;
+    // İlk kurulum ekranı
+    @GetMapping("/setup")
+    public String setupPage() {
+        return "setup";
     }
 
+    // İlk kurulum POST (masa sayısı kaydedilir)
+    @PostMapping("/setup")
+    public String setupComplete(@RequestParam int tableCount, Principal principal) {
+
+        // Admin'i getir
+        Admin admin = adminService.findByUsername(principal.getName());
+
+        // Masaları oluştur
+        tableService.initializeTables(tableCount);
+
+        // Admin setup completed olarak işaretle
+        adminService.markSetupCompleted(admin);
+
+        // Admin paneline yönlendir
+        return "redirect:/admin/panel";
+    }
+
+    // Admin paneli
+    @GetMapping("/panel")
+    public String panel() {
+        return "admin";
+    }
+
+    // API → masaları getir
     @GetMapping("/tables")
-    public List<Table> getTables() {
-        return tableService.getTables();
+    @ResponseBody
+    public List<TableEntity> getTables() {
+        return tableService.getAll();
     }
 
+    // API → masa ekle
     @PostMapping("/tables")
-    public void addTable(@RequestBody Table table) {
-        tableService.addTable(table);
+    @ResponseBody
+    public TableEntity addTable(@RequestBody TableEntity table) {
+        return tableService.addTable(table.getNumber(), table.isActive());
     }
 
-    @PutMapping("/tables/{number}")
-    public void updateTable(@PathVariable int number, @RequestParam boolean active) {
-        tableService.setActive(number, active);
+    // API → aktif/pasif güncelle
+    @PutMapping("/tables/{num}")
+    @ResponseBody
+    public void updateTable(
+            @PathVariable int num,
+            @RequestParam boolean active
+    ) {
+        tableService.setActive(num, active);
     }
 }

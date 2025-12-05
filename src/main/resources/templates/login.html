@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Giriş</title>
+</head>
+<body>
+<h1>Admin Login</h1>
+
+<form method="post" action="/do-login">
+    <label>Kullanıcı Adı:</label>
+    <input name="username"><br><br>
+
+    <label>Şifre:</label>
+    <input type="password" name="password"><br><br>
+
+    <button type="submit">Giriş Yap</button>
+
+    <div style="color:red;">
+        ${param.error ? 'Hatalı giriş!' : ''}
+    </div>
+</form>
+</body>
+</html>

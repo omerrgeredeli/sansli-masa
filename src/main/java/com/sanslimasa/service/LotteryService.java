@@ -1,60 +1,61 @@
 package com.sanslimasa.service;
 
-import com.sanslimasa.model.Table;
-import lombok.Getter;
+import com.sanslimasa.model.TableEntity;
+import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Random;
 
 @Service
+@RequiredArgsConstructor
 public class LotteryService {
 
     private final TableService tableService;
-    private final SimpMessagingTemplate messagingTemplate;
-    private final Random random = new Random();
+    private final SimpMessagingTemplate messaging;
 
-    // TV ekranının sayfa yenilemede son kazananı çekmesi için metot
-    // Eğer hiç çekiliş yapılmadıysa veya son çekilişte aktif masa yoksa 0 döndürebiliriz
-    // Son kazanan masa numarasını tutar
-    @Getter
-    private Integer lastWinnerNumber = null;
+    private Integer lastWinner = null;
 
-    public LotteryService(TableService tableService, SimpMessagingTemplate messagingTemplate) {
-        this.tableService = tableService;
-        this.messagingTemplate = messagingTemplate;
+    public Integer getLastWinnerNumber() {
+        return lastWinner;
     }
 
-    /**
-     * Her saat başında (00 dakika, 00 saniye) çalışır.
-     * Cron: "0 0 * * * *"
-     */
+    // TV ekranına "çark dönmeye başladı" mesajı gönderir
+    public void broadcastSpinStart() {
+        messaging.convertAndSend("/topic/spin", "start");
+    }
+
+    // Manuel çekiliş (admin veya test için)
+    public int runLottery() {
+        return runLotteryInternal();
+    }
+
+    // Otomatik çekiliş (her saat)
     @Scheduled(cron = "0 0 * * * *")
-    public void runLottery() {
-        System.out.println("--- Çekiliş Başladı: " + java.time.LocalDateTime.now() + " ---");
+    public void runLotteryAuto() {
+        runLotteryInternal();
+    }
 
-        List<Table> active = tableService.getActiveTables();
+    private int runLotteryInternal() {
 
-        if (active.isEmpty()) {
-            System.out.println("Çekilişe katılan aktif masa bulunamadı.");
-            // Eğer aktif masa yoksa, kazananı "YOK" olarak yayınlayabiliriz.
-            messagingTemplate.convertAndSend("/topic/winner", 0); // TV'ye "0" gönderelim
-            lastWinnerNumber = 0;
-            return;
+        List<TableEntity> activeTables = tableService.getActiveTables();
+
+        int winner;
+        if (activeTables.isEmpty()) {
+            winner = 0;
+        } else {
+            Random rnd = new Random();
+            int index = rnd.nextInt(activeTables.size());
+            winner = activeTables.get(index).getNumber();
         }
 
-        // Aktif masalar arasından rastgele birini seç
-        Table winner = active.get(random.nextInt(active.size()));
+        lastWinner = winner;
 
-        // Sonucu bellekte tut
-        this.lastWinnerNumber = winner.getNumber();
+        // TV ekranına kazanan numarayı gönder
+        messaging.convertAndSend("/topic/winner", String.valueOf(winner));
 
-        // WebSocket üzerinden sonucu TV ekranlarına gönder
-        messagingTemplate.convertAndSend("/topic/winner", winner.getNumber());
-
-        System.out.println("KAZANAN MASA: " + winner.getNumber());
-        System.out.println("-------------------------------------------------");
+        return winner;
     }
-
 }

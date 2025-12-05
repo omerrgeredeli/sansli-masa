@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel - Masa Yönetimi</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        /* Üstte masa ekleme alanı */
+        #panel-top {
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 140px;
+        }
+
+        button {
+            padding: 10px 18px;
+            cursor: pointer;
+            font-size: 16px;
+            background: #3498db;
+            border: none;
+            color: #fff;
+            border-radius: 6px;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        /* GRID */
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .table-box {
+            width: 100%;
+            height: 100px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: 0.2s;
+        }
+
+        .active {
+            background: #2ecc71;
+            box-shadow: 0 0 10px #2ecc71;
+        }
+
+        .inactive {
+            background: #e74c3c;
+            box-shadow: 0 0 10px #e74c3c;
+        }
+
+        .table-box:hover {
+            transform: scale(1.05);
+        }
+
+    </style>
+</head>
+
+<body>
+
+<h1>Admin Panel – Masa Yönetimi</h1>
+
+<div id="panel-top">
+    <input id="num" type="number" placeholder="Masa No">
+    <button onclick="addTable()">Ekle</button>
+</div>
+
+<h2>Masalar</h2>
+<div id="grid"></div>
+
+
+<script>
+    // MASALARI YÜKLE
+    async function load() {
+        const res = await fetch("/admin/tables");
+        const data = await res.json();
+
+        let html = "";
+
+        data.forEach(t => {
+            const cls = t.active ? "active" : "inactive";
+
+            html += `
+                <div class="table-box ${cls}" onclick="toggle(${t.number}, ${t.active})">
+                    ${t.number}
+                </div>
+            `;
+        });
+
+        document.getElementById("grid").innerHTML = html;
+    }
+
+    // MASA EKLE
+    async function addTable() {
+        const num = parseInt(document.getElementById("num").value);
+        if (isNaN(num) || num <= 0) {
+            alert("Geçerli masa numarası gir.");
+            return;
+        }
+
+        await fetch("/admin/tables", {
+            method: "POST",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ number: num, active: true })
+        });
+
+        document.getElementById("num").value = "";
+        load();
+    }
+
+    // MASA AKTİF/PASİF DEĞİŞTİR
+    async function toggle(num, active) {
+        await fetch(`/admin/tables/${num}?active=${!active}`, {
+            method: "PUT"
+        });
+
+        load();
+    }
+
+    // Sayfa açılınca yükle
+    load();
+</script>
+
+</body>
+</html>
