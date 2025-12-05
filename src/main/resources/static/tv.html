@@ -9,24 +9,40 @@
             background: #000;
             color: #fff;
             text-align: center;
-            font-family: Arial, sans-serif;
-            margin-top: 100px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin-top: 10vh;
         }
 
         h1 {
-            font-size: 70px;
+            font-size: 5vw;
+            color: #00ff99;
+            text-shadow: 0 0 10px #00ff99;
+        }
+
+        #timer-label {
+            font-size: 3vw;
+            color: #ccc;
+            margin-top: 5vh;
         }
 
         #timer {
-            font-size: 90px;
-            margin-top: 20px;
-            margin-bottom: 40px;
+            font-size: 10vw;
+            margin-top: 1vh;
+            margin-bottom: 5vh;
+            color: #ff5555;
+            font-weight: bold;
+        }
+
+        #winner-label {
+             font-size: 3vw;
+             color: #ccc;
         }
 
         #winner {
-            font-size: 100px;
+            font-size: 15vw;
             color: yellow;
-            margin-top: 50px;
+            text-shadow: 0 0 20px yellow;
+            margin-top: 2vh;
         }
     </style>
 
@@ -35,59 +51,127 @@
 </head>
 <body>
 
-<h1>VERSION TEST 999</h1>
-<div id="timer">00:00</div>
-<div id="winner">Bekleniyor...</div>
+<h1>ŞANSLI MASA ÇEKİLİŞİ</h1>
+<div id="winner-label">KAZANAN MASA NUMARASI:</div>
+<div id="winner">Yükleniyor...</div>
+
+<div id="timer-label">BİR SONRAKİ ÇEKİLİŞE KALAN SÜRE:</div>
+<div id="timer">00:00:00</div>
+
 
 <script>
+    // Tüm kodu kapsayarak global kapsam sorunlarını (fetch hatası gibi) önler.
+    (function() {
 
-    // --------------------------------------
-    // TIMER
-    // --------------------------------------
-    function updateTimer() {
-        const now = new Date();
-        const nextHour = new Date();
+        // Kazanan numarayı ekranda gösteren fonksiyon
+        function displayWinner(tableNumber) {
+            const winnerElement = document.getElementById("winner");
+            if (tableNumber > 0) {
+                winnerElement.innerText = "Masa " + tableNumber;
+                winnerElement.style.fontSize = "15vw";
+            } else if (tableNumber === 0) {
+                winnerElement.innerText = "Aktif Masa Yok!";
+                winnerElement.style.fontSize = "10vw";
+            } else {
+                winnerElement.innerText = "Bekleniyor...";
+                winnerElement.style.fontSize = "10vw";
+            }
+        }
 
-        nextHour.setHours(now.getHours() + 1);
-        nextHour.setMinutes(0);
-        nextHour.setSeconds(0);
+        // --------------------------------------
+        // SON KAZANANI ÇEK (Sayfa Yüklenirken)
+        // --------------------------------------
+        fetch("/api/last-winner")
+        .then(r => {
+            // Cevap başarılı ve içeriği varsa json'a çevir
+            const contentType = r.headers.get("content-type");
+            if (r.ok && contentType && contentType.includes("application/json")) {
+                 return r.json();
+            }
+            // Başarısız veya boş cevap dönerse null olarak devam et
+            return null;
+        })
+        .then(data => {
+            if (data !== null) {
+                displayWinner(data);
+            } else {
+                displayWinner(null);
+            }
+        })
+        .catch(error => {
+            console.error("Son kazanan yüklenemedi:", error);
+            displayWinner(null);
+            });
 
-        const diff = nextHour - now;
-        const seconds = Math.floor(diff / 1000) % 60;
-        const minutes = Math.floor(diff / (1000 * 60)) % 60;
 
-        document.getElementById("timer").innerText =
-            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
+        // --------------------------------------
+        // TIMER - Geri Sayım Mantığı
+        // --------------------------------------
+        function updateTimer() {
+            const now = new Date();
+            const nextHour = new Date();
 
-    setInterval(updateTimer, 1000);
-    updateTimer();
+            nextHour.setHours(now.getHours() + 1);
+            nextHour.setMinutes(0);
+            nextHour.setSeconds(0);
+
+            const diff = nextHour - now;
+            const totalSeconds = Math.floor(diff / 1000);
+            const seconds = totalSeconds % 60;
+            const minutes = Math.floor(totalSeconds / 60) % 60;
+            const hours = Math.floor(totalSeconds / (60 * 60));
+
+            document.getElementById("timer").innerText =
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        setInterval(updateTimer, 1000);
+        updateTimer();
 
 
-    // --------------------------------------
-    // WEBSOCKET - STOMP
-    // --------------------------------------
-    console.log("StompJs kontrol:", typeof StompJs);
+        // --------------------------------------
+        // WEBSOCKET - STOMP BAĞLANTISI (Kritik Düzeltmeler)
+        // --------------------------------------
+        var socketUrl = '/ws';
 
-    var socket = new SockJS('/ws');
+        // 1. SockJS nesnesini oluştur
+        var socket = new SockJS(socketUrl);
 
-    // ❗❗ ÖNEMLİ: const DEĞİL var KULLANIYORUZ!
-    var stompClient = new StompJs.Client({
-        webSocketFactory: () => socket,
-        reconnectDelay: 3000
-    });
+        // 2. Stomp istemcisini URL ile oluştur (Eski API: Stomp.client(url))
+        var stompClient = Stomp.client(socketUrl);
 
-    stompClient.onConnect = () => {
-        console.log("WS CONNECTED!");
+        // 3. Stomp'a, transport olarak SockJS kullanacağını bildir
+        stompClient.ws = socket;
 
-        stompClient.subscribe('/topic/winner', msg => {
-            console.log("TV Winner Mesajını Aldı:", msg.body);
-            document.getElementById("winner").innerText =
-                "Masa " + msg.body;
-        });
-    };
+        // 4. Bağlantı başarılı callback fonksiyonu
+        var onConnectCallback = function(frame) {
+            console.log('WS CONNECTED! Frame: ' + frame);
 
-    stompClient.activate();
+            // /topic/winner kanalına abone ol
+            stompClient.subscribe('/topic/winner', msg => {
+                // Gelen mesaj çekiliş sonucudur
+                const winnerNumber = parseInt(msg.body);
+                console.log("WS MESAJI ALINDI. Masa No:", winnerNumber);
+
+                // Kazananı ekranda göstermek için fonksiyonu çağır (Otomatik Güncelleme!)
+                displayWinner(winnerNumber);
+            });
+        };
+
+        // 5. Hata durumunda çalışacak callback
+        var onErrorCallback = function(error) {
+            console.error('STOMP Bağlantı Hatası: ' + error);
+        };
+
+        // 6. Bağlantıyı başlat (Eski API: connect(headers, successCallback, errorCallback))
+        // Reconnect logic'i bu callback'lerin içinde elle yönetilmesi gerekebilir.
+        stompClient.connect({}, onConnectCallback, onErrorCallback);
+
+        // Not: stompClient.reconnectDelay = 3000; bağlantı kesildiğinde otomatik olarak yeniden bağlanmak için kullanılabilir
+        // ancak connect() metodu kullanıldığında manuel olarak connect() tekrar çağrılması gerekebilir.
+        // Şimdilik sadece başarılı bağlantıya odaklanıyoruz.
+
+    })(); // Anonim fonksiyonun sonu
 
 </script>
 
